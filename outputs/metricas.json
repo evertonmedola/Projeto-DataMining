@@ -1,0 +1,26 @@
+{
+  "Baseline sazonal (7 dias)": {
+    "MAE": 13.236,
+    "RMSE": 16.386,
+    "R2": -0.9924,
+    "MAPE_%": 12.93
+  },
+  "SARIMAX (ARIMA sazonal)": {
+    "MAE": 9.753,
+    "RMSE": 12.009,
+    "R2": -0.0701,
+    "MAPE_%": 9.57
+  },
+  "Prophet": {
+    "MAE": 8.645,
+    "RMSE": 10.985,
+    "R2": 0.1046,
+    "MAPE_%": 8.44
+  },
+  "Gradient Boosting": {
+    "MAE": 9.995,
+    "RMSE": 12.193,
+    "R2": -0.1032,
+    "MAPE_%": 9.84
+  }
+}
