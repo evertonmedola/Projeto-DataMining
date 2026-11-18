@@ -1,0 +1,20 @@
+flowchart TB
+    subgraph T["Pipeline de treino  (python -m src.pipeline  ·  dvc repro)"]
+        direction LR
+        P[/"params.yaml<br/>sementes, grades, limites"/]
+        G["Ingestão<br/>gerar_dados.py"] --> V["Validação<br/>validar_dados.py"] --> PR["Preparação<br/>preparar_dados.py"] --> M["Modelagem<br/>backtest + busca + teste<br/>modelagem.py"] --> TR["Treino final<br/>treinar.py"]
+        P -.-> G
+        TR --> REG[("Registro de modelos<br/>models/vN + registry.json")]
+        M -. "parâmetros e métricas" .-> ML[("MLflow<br/>experimentos + Model Registry")]
+        TR -. "versão N" .-> ML
+    end
+    subgraph U["Uso  (a cada consulta)"]
+        direction LR
+        USR(["Time de FinOps /<br/>Engenharia"]) --> D["Dashboard<br/>Streamlit"]
+        D -- "HTTP/JSON" --> API["API REST<br/>FastAPI"]
+        EXP(["Exportação diária<br/>do provedor cloud"]) -- "POST /observacoes" --> API
+        API --> S["Serviço de previsão<br/>Prophet vN · alertas"]
+        API <--> DB[("SQLite<br/>metricas_diarias · previsoes · alertas")]
+    end
+    REG -- "carrega versão em produção" --> S
+    CI["GitHub Actions<br/>lint · pipeline · testes · build Docker"] -.-> T

@@ -1,0 +1,90 @@
+# Pipeline declarativo (DVC). `dvc repro` refaz apenas as etapas cujas
+# dependências (código, parâmetros ou dados) mudaram; os hashes de cada
+# entrada/saída ficam em dvc.lock.
+# Os artefatos são pequenos (< 3 MB) e por isso são versionados no próprio
+# Git (cache: false), sem precisar de um remote DVC.
+# Sem DVC instalado, `python -m src.pipeline` executa as mesmas etapas.
+stages:
+  ingestao:
+    cmd: python -m src.gerar_dados
+    deps:
+      - src/gerar_dados.py
+    params:
+      - seed
+      - dados
+    outs:
+      - data/cloud_infra_bruto.csv:
+          cache: false
+      - data/incidentes_injetados.csv:
+          cache: false
+
+  validacao:
+    cmd: python -m src.validar_dados
+    deps:
+      - src/validar_dados.py
+      - data/cloud_infra_bruto.csv
+    outs:
+      - outputs/relatorio_qualidade.json:
+          cache: false
+
+  preparacao:
+    cmd: python -m src.preparar_dados
+    deps:
+      - src/preparar_dados.py
+      - data/cloud_infra_bruto.csv
+      - outputs/relatorio_qualidade.json
+    params:
+      - preparacao
+    outs:
+      - data/cloud_infra_preparado.csv:
+          cache: false
+      - outputs/relatorio_preparacao.json:
+          cache: false
+
+  modelagem:
+    cmd: python -m src.modelagem
+    deps:
+      - src/modelagem.py
+      - data/cloud_infra_preparado.csv
+    params:
+      - seed
+      - avaliacao
+      - busca
+    outs:
+      - outputs/previsoes_teste.csv:
+          cache: false
+      - outputs/resultados_cv.json:
+          cache: false
+      - outputs/melhores_params.json:
+          cache: false
+      - outputs/metricas_horizonte.csv:
+          cache: false
+      - outputs/importancia_features_gb.csv:
+          cache: false
+    metrics:
+      - outputs/metricas.json:
+          cache: false
+
+  treino:
+    cmd: python -m src.treinar
+    deps:
+      - src/treinar.py
+      - src/registro.py
+      - data/cloud_infra_preparado.csv
+      - outputs/melhores_params.json
+      - outputs/metricas.json
+    outs:
+      - models:
+          cache: false
+          persist: true
+
+  figuras:
+    cmd: python -m src.graficos
+    deps:
+      - src/graficos.py
+      - outputs/metricas.json
+      - outputs/previsoes_teste.csv
+      - models
+    outs:
+      - outputs/figuras:
+          cache: false

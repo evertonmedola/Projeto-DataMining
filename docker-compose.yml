@@ -1,0 +1,55 @@
+# docker compose up --build
+#   1) pipeline  -> gera dados, valida, prepara, avalia, treina e registra o modelo (roda e termina)
+#   2) api       -> http://localhost:8000/docs   (só sobe depois do pipeline terminar com sucesso)
+#   3) dashboard -> http://localhost:8501
+#   4) mlflow    -> http://localhost:5000        (experimentos e Model Registry)
+# A pasta do projeto é montada em /app, então os artefatos ficam no seu disco.
+services:
+  pipeline:
+    build: .
+    image: cloudcast:1.0
+    command: ["python", "-m", "src.pipeline", "--rapido"]
+    volumes:
+      - ./:/app
+
+  api:
+    image: cloudcast:1.0
+    command: ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/app
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  dashboard:
+    image: cloudcast:1.0
+    command: ["streamlit", "run", "dashboard/app.py", "--server.address=0.0.0.0", "--server.port=8501",
+              "--server.headless=true", "--browser.gatherUsageStats=false"]
+    environment:
+      CLOUDCAST_API_URL: http://api:8000
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./:/app
+    depends_on:
+      api:
+        condition: service_healthy
+
+  mlflow:
+    image: cloudcast:1.0
+    command: ["mlflow", "server", "--backend-store-uri", "sqlite:///mlruns/mlflow.db",
+              "--host", "0.0.0.0", "--port", "5000", "--allowed-hosts", "*"]
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./:/app
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully

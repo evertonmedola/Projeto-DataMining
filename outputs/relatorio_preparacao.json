@@ -1,0 +1,30 @@
+{
+  "preparacao": {
+    "linhas_brutas": 735,
+    "linhas_identicas": 5,
+    "datas_repetidas_removidas": 5,
+    "datas_faltantes_reinseridas": 0,
+    "valores_ausentes_imputados": {
+      "requisicoes": 14,
+      "cpu_pct": 14,
+      "memoria_pct": 14,
+      "armazenamento_gb": 14,
+      "custo_usd": 0
+    },
+    "dias_com_incidente": 11,
+    "linhas_descartadas_por_lag": 14,
+    "linhas_finais": 716,
+    "colunas_finais": 26,
+    "periodo_final": [
+      "2023-01-15",
+      "2024-12-30"
+    ]
+  },
+  "deteccao_incidentes": {
+    "verdadeiros_positivos": 10,
+    "falsos_positivos": 1,
+    "falsos_negativos": 0,
+    "precisao": 0.909,
+    "recall": 1.0
+  }
+}

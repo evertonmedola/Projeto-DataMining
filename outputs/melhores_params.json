@@ -1,0 +1,25 @@
+{
+  "baseline": {},
+  "sarimax": {
+    "order": [
+      1,
+      1,
+      1
+    ],
+    "seasonal_order": [
+      0,
+      1,
+      1,
+      7
+    ]
+  },
+  "prophet": {
+    "changepoint_prior_scale": 0.05,
+    "seasonality_mode": "multiplicative"
+  },
+  "gb": {
+    "n_estimators": 300,
+    "learning_rate": 0.03,
+    "max_depth": 3
+  }
+}

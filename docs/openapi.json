@@ -1,0 +1,772 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CloudCast API",
+    "description": "Previsão de consumo e custo de infraestrutura cloud (tema 4 -- Mineração de Dados, FAG).",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/model/info": {
+      "get": {
+        "tags": [
+          "modelo"
+        ],
+        "summary": "Info Modelo",
+        "operationId": "info_modelo_model_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InfoModelo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/model/reload": {
+      "post": {
+        "tags": [
+          "modelo"
+        ],
+        "summary": "Recarregar Modelo",
+        "operationId": "recarregar_modelo_model_reload_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/forecast": {
+      "get": {
+        "tags": [
+          "previsão"
+        ],
+        "summary": "Forecast",
+        "operationId": "forecast_forecast_get",
+        "parameters": [
+          {
+            "name": "horizonte",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 90,
+              "minimum": 1,
+              "description": "Dias à frente (1 = amanhã, 7 = próxima semana)",
+              "default": 7,
+              "title": "Horizonte"
+            },
+            "description": "Dias à frente (1 = amanhã, 7 = próxima semana)"
+          },
+          {
+            "name": "referencia",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Simulação retroativa: prever como se hoje fosse esta data (usa só o histórico anterior a ela). Não é persistida.",
+              "title": "Referencia"
+            },
+            "description": "Simulação retroativa: prever como se hoje fosse esta data (usa só o histórico anterior a ela). Não é persistida."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaPrevisao"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/historico": {
+      "get": {
+        "tags": [
+          "consumo"
+        ],
+        "summary": "Historico",
+        "operationId": "historico_historico_get",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3650,
+              "minimum": 1,
+              "default": 90,
+              "title": "Dias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/observacoes": {
+      "post": {
+        "tags": [
+          "consumo"
+        ],
+        "summary": "Registrar Observacao",
+        "operationId": "registrar_observacao_observacoes_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Observacao"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespostaObservacao"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/alertas": {
+      "get": {
+        "tags": [
+          "alertas"
+        ],
+        "summary": "Listar Alertas",
+        "operationId": "listar_alertas_alertas_get",
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/previsoes": {
+      "get": {
+        "tags": [
+          "auditoria"
+        ],
+        "summary": "Listar Previsoes",
+        "operationId": "listar_previsoes_previsoes_get",
+        "parameters": [
+          {
+            "name": "limite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 5000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limite"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/monitoramento": {
+      "get": {
+        "tags": [
+          "operação"
+        ],
+        "summary": "Monitoramento",
+        "operationId": "monitoramento_monitoramento_get",
+        "parameters": [
+          {
+            "name": "dias",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 365,
+              "minimum": 1,
+              "default": 30,
+              "title": "Dias"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AlertaOut": {
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "title": "Tipo"
+          },
+          "severidade": {
+            "type": "string",
+            "title": "Severidade"
+          },
+          "mensagem": {
+            "type": "string",
+            "title": "Mensagem"
+          },
+          "valor": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valor"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tipo",
+          "severidade",
+          "mensagem"
+        ],
+        "title": "AlertaOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "InfoModelo": {
+        "properties": {
+          "nome": {
+            "type": "string",
+            "title": "Nome"
+          },
+          "versao": {
+            "type": "integer",
+            "title": "Versao"
+          },
+          "algoritmo": {
+            "type": "string",
+            "title": "Algoritmo"
+          },
+          "hiperparametros": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Hiperparametros"
+          },
+          "treinado_ate": {
+            "type": "string",
+            "title": "Treinado Ate"
+          },
+          "n_observacoes": {
+            "type": "integer",
+            "title": "N Observacoes"
+          },
+          "metricas_teste": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metricas Teste"
+          },
+          "metricas_teste_consumo": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metricas Teste Consumo"
+          },
+          "dados_sha256": {
+            "type": "string",
+            "title": "Dados Sha256"
+          },
+          "git_commit": {
+            "type": "string",
+            "title": "Git Commit"
+          },
+          "criado_em": {
+            "type": "string",
+            "title": "Criado Em"
+          }
+        },
+        "type": "object",
+        "required": [
+          "nome",
+          "versao",
+          "algoritmo",
+          "hiperparametros",
+          "treinado_ate",
+          "n_observacoes",
+          "metricas_teste",
+          "metricas_teste_consumo",
+          "dados_sha256",
+          "git_commit",
+          "criado_em"
+        ],
+        "title": "InfoModelo"
+      },
+      "Observacao": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "requisicoes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Requisicoes",
+            "description": "Requisições recebidas no dia"
+          },
+          "instancias_ativas": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "Instancias Ativas",
+            "description": "Média de instâncias ativas"
+          },
+          "cpu_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Cpu Pct"
+          },
+          "memoria_pct": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Memoria Pct"
+          },
+          "armazenamento_gb": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Armazenamento Gb"
+          },
+          "custo_usd": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Custo Usd",
+            "description": "Custo total do dia em USD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "requisicoes",
+          "instancias_ativas",
+          "cpu_pct",
+          "memoria_pct",
+          "armazenamento_gb",
+          "custo_usd"
+        ],
+        "title": "Observacao",
+        "description": "Métricas de um dia de operação, como exportadas do provedor cloud.",
+        "example": {
+          "armazenamento_gb": 1950.0,
+          "cpu_pct": 66.5,
+          "custo_usd": 104.3,
+          "data": "2024-12-31",
+          "instancias_ativas": 27,
+          "memoria_pct": 68.1,
+          "requisicoes": 185000
+        }
+      },
+      "PontoPrevisao": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "custo_previsto": {
+            "type": "number",
+            "title": "Custo Previsto"
+          },
+          "custo_limite_inferior": {
+            "type": "number",
+            "title": "Custo Limite Inferior"
+          },
+          "custo_limite_superior": {
+            "type": "number",
+            "title": "Custo Limite Superior"
+          },
+          "tendencia": {
+            "type": "number",
+            "title": "Tendencia"
+          },
+          "requisicoes_previstas": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requisicoes Previstas"
+          },
+          "instancias_previstas": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Instancias Previstas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "custo_previsto",
+          "custo_limite_inferior",
+          "custo_limite_superior",
+          "tendencia"
+        ],
+        "title": "PontoPrevisao"
+      },
+      "RespostaObservacao": {
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date",
+            "title": "Data"
+          },
+          "atualizado": {
+            "type": "boolean",
+            "title": "Atualizado"
+          },
+          "custo_previsto": {
+            "type": "number",
+            "title": "Custo Previsto"
+          },
+          "limite_superior": {
+            "type": "number",
+            "title": "Limite Superior"
+          },
+          "alerta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertaOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "data",
+          "atualizado",
+          "custo_previsto",
+          "limite_superior",
+          "alerta"
+        ],
+        "title": "RespostaObservacao"
+      },
+      "RespostaPrevisao": {
+        "properties": {
+          "versao_modelo": {
+            "type": "integer",
+            "title": "Versao Modelo"
+          },
+          "gerado_a_partir_de": {
+            "type": "string",
+            "format": "date",
+            "title": "Gerado A Partir De"
+          },
+          "horizonte": {
+            "type": "integer",
+            "title": "Horizonte"
+          },
+          "simulacao": {
+            "type": "boolean",
+            "title": "Simulacao",
+            "default": false
+          },
+          "resumo": {
+            "$ref": "#/components/schemas/ResumoPrevisao"
+          },
+          "previsao": {
+            "items": {
+              "$ref": "#/components/schemas/PontoPrevisao"
+            },
+            "type": "array",
+            "title": "Previsao"
+          },
+          "alertas": {
+            "items": {
+              "$ref": "#/components/schemas/AlertaOut"
+            },
+            "type": "array",
+            "title": "Alertas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "versao_modelo",
+          "gerado_a_partir_de",
+          "horizonte",
+          "resumo",
+          "previsao",
+          "alertas"
+        ],
+        "title": "RespostaPrevisao"
+      },
+      "ResumoPrevisao": {
+        "properties": {
+          "custo_amanha": {
+            "type": "number",
+            "title": "Custo Amanha"
+          },
+          "custo_proxima_semana": {
+            "type": "number",
+            "title": "Custo Proxima Semana"
+          },
+          "custo_projetado_periodo": {
+            "type": "number",
+            "title": "Custo Projetado Periodo"
+          },
+          "custo_projetado_30_dias": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custo Projetado 30 Dias"
+          },
+          "media_diaria_ultimos_7_dias": {
+            "type": "number",
+            "title": "Media Diaria Ultimos 7 Dias"
+          },
+          "variacao_semana_vs_recente_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variacao Semana Vs Recente Pct"
+          },
+          "variacao_tendencia_periodo_pct": {
+            "type": "number",
+            "title": "Variacao Tendencia Periodo Pct"
+          }
+        },
+        "type": "object",
+        "required": [
+          "custo_amanha",
+          "custo_proxima_semana",
+          "custo_projetado_periodo",
+          "custo_projetado_30_dias",
+          "media_diaria_ultimos_7_dias",
+          "variacao_semana_vs_recente_pct",
+          "variacao_tendencia_periodo_pct"
+        ],
+        "title": "ResumoPrevisao"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

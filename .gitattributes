@@ -1,0 +1,8 @@
+# Quebra de linha LF em todos os arquivos de texto, também no Windows.
+# Sem isto, o Git converte para CRLF no checkout e os hashes de dvc.lock
+# (calculados byte a byte) deixam de bater com os dados versionados.
+* text=auto eol=lf
+*.png binary
+*.docx binary
+*.pdf binary
+*.db binary

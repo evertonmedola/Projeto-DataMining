@@ -1,0 +1,210 @@
+schema: '2.0'
+stages:
+  ingestao:
+    cmd: python -m src.gerar_dados
+    deps:
+    - path: src/gerar_dados.py
+      hash: md5
+      md5: 6c110d50b2327a6c88bdb43408c68d7d
+      size: 7412
+    params:
+      params.yaml:
+        dados:
+          n_dias: 730
+          data_inicial: '2023-01-01'
+        seed: 42
+    outs:
+    - path: data/cloud_infra_bruto.csv
+      hash: md5
+      md5: bdd4f848effa9756eea549d6d9d7eccc
+      size: 55848
+    - path: data/incidentes_injetados.csv
+      hash: md5
+      md5: 09f70f2813a87239f78a0a80e1fac783
+      size: 115
+  validacao:
+    cmd: python -m src.validar_dados
+    deps:
+    - path: data/cloud_infra_bruto.csv
+      hash: md5
+      md5: bdd4f848effa9756eea549d6d9d7eccc
+      size: 55848
+    - path: src/validar_dados.py
+      hash: md5
+      md5: 39d7cba6a89f53519419529cc5cbee5e
+      size: 5277
+    outs:
+    - path: outputs/relatorio_qualidade.json
+      hash: md5
+      md5: b75222bf67599b9beaacfbb9fccee738
+      size: 1536
+  preparacao:
+    cmd: python -m src.preparar_dados
+    deps:
+    - path: data/cloud_infra_bruto.csv
+      hash: md5
+      md5: bdd4f848effa9756eea549d6d9d7eccc
+      size: 55848
+    - path: outputs/relatorio_qualidade.json
+      hash: md5
+      md5: b75222bf67599b9beaacfbb9fccee738
+      size: 1536
+    - path: src/preparar_dados.py
+      hash: md5
+      md5: 010d21e7f1e4756e289cd6dcbc88e3ca
+      size: 10317
+    params:
+      params.yaml:
+        preparacao:
+          janela_mediana: 15
+          fator_iqr: 2.5
+          lags:
+          - 1
+          - 2
+          - 7
+          - 14
+    outs:
+    - path: data/cloud_infra_preparado.csv
+      hash: md5
+      md5: 1f46c9bda473158ec1a97540db012f6e
+      size: 154720
+    - path: outputs/relatorio_preparacao.json
+      hash: md5
+      md5: d2f75a6128c3653f65dc1910ac710c31
+      size: 665
+  modelagem:
+    cmd: python -m src.modelagem
+    deps:
+    - path: data/cloud_infra_preparado.csv
+      hash: md5
+      md5: 1f46c9bda473158ec1a97540db012f6e
+      size: 154720
+    - path: src/modelagem.py
+      hash: md5
+      md5: 2f8bcfbfd7031ae1dfab5e75495a5439
+      size: 19869
+    params:
+      params.yaml:
+        avaliacao:
+          dias_teste: 60
+          n_folds: 5
+          dias_por_fold: 30
+          horizonte_max: 7
+          passo_reajuste_prophet: 7
+        busca:
+          sarimax:
+            order:
+            - - 1
+              - 1
+              - 1
+            - - 2
+              - 1
+              - 2
+            seasonal_order:
+            - - 1
+              - 0
+              - 1
+              - 7
+            - - 0
+              - 1
+              - 1
+              - 7
+          prophet:
+            changepoint_prior_scale:
+            - 0.01
+            - 0.05
+            - 0.2
+            seasonality_mode:
+            - additive
+            - multiplicative
+          gb:
+            n_estimators:
+            - 150
+            - 300
+            learning_rate:
+            - 0.03
+            - 0.08
+            max_depth:
+            - 2
+            - 3
+        seed: 42
+    outs:
+    - path: outputs/importancia_features_gb.csv
+      hash: md5
+      md5: af5f72ea28af2b652244c8f4afbea7a1
+      size: 787
+    - path: outputs/melhores_params.json
+      hash: md5
+      md5: f4026f2fd9ba1c23f30714b940d22bcd
+      size: 337
+    - path: outputs/metricas.json
+      hash: md5
+      md5: bced94b810bdb869f3ba657f99b5a293
+      size: 458
+    - path: outputs/metricas_horizonte.csv
+      hash: md5
+      md5: e93f9eaae24645e7cbfdd617f08a758c
+      size: 1141
+    - path: outputs/previsoes_teste.csv
+      hash: md5
+      md5: 172b6274618e1de0bc451b263e41f9b9
+      size: 5323
+    - path: outputs/resultados_cv.json
+      hash: md5
+      md5: 22dbab58410b50fe9ebc831943b202ff
+      size: 23200
+  treino:
+    cmd: python -m src.treinar
+    deps:
+    - path: data/cloud_infra_preparado.csv
+      hash: md5
+      md5: 1f46c9bda473158ec1a97540db012f6e
+      size: 154720
+    - path: outputs/melhores_params.json
+      hash: md5
+      md5: f4026f2fd9ba1c23f30714b940d22bcd
+      size: 337
+    - path: outputs/metricas.json
+      hash: md5
+      md5: bced94b810bdb869f3ba657f99b5a293
+      size: 458
+    - path: src/registro.py
+      hash: md5
+      md5: 03ab5da088a9ddb63f6686448f4dcb50
+      size: 3510
+    - path: src/treinar.py
+      hash: md5
+      md5: 7a74c0e85d83f050a004c841cc5dca3d
+      size: 5686
+    outs:
+    - path: models
+      hash: md5
+      md5: a378f0a712d8c0303769624acdf5c76b.dir
+      size: 351319
+      nfiles: 5
+  figuras:
+    cmd: python -m src.graficos
+    deps:
+    - path: models
+      hash: md5
+      md5: a378f0a712d8c0303769624acdf5c76b.dir
+      size: 351319
+      nfiles: 5
+    - path: outputs/metricas.json
+      hash: md5
+      md5: bced94b810bdb869f3ba657f99b5a293
+      size: 458
+    - path: outputs/previsoes_teste.csv
+      hash: md5
+      md5: 172b6274618e1de0bc451b263e41f9b9
+      size: 5323
+    - path: src/graficos.py
+      hash: md5
+      md5: eae4907708f788bdddeb206e9c25108f
+      size: 13656
+    outs:
+    - path: outputs/figuras
+      hash: md5
+      md5: 76d7a2488dab19d0da5e1ea3b145fb3e.dir
+      size: 1807907
+      nfiles: 12

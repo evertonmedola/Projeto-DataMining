@@ -13,9 +13,12 @@ import matplotlib
 matplotlib.use("Agg")  # backend sem janela: o script só grava arquivos
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
-from config import (
+from src.config import (
+    ARQ_CV,
+    ARQ_HORIZONTE,
     ARQ_IMPORTANCIAS,
     ARQ_METRICAS,
     ARQ_PREVISOES,
@@ -25,6 +28,7 @@ from config import (
     DIAS_TESTE,
     MODELOS,
     PASTA_FIGURAS,
+    PASTA_MODELOS,
     cor,
     garantir_pastas,
     rotulo,
@@ -115,9 +119,7 @@ def fig_previsao_vs_real():
     df = pd.read_csv(ARQ_PREVISOES, parse_dates=["data"])
 
     fig, ax = plt.subplots(figsize=(11, 5))
-    ax.plot(
-        df["data"], df["custo_usd"], color=COR_REAL, linewidth=2, label="Real", marker="o", markersize=3
-    )
+    ax.plot(df["data"], df["custo_usd"], color=COR_REAL, linewidth=2, label="Real", marker="o", markersize=3)
     for chave in MODELOS:
         coluna = f"previsao_{chave}"
         if coluna not in df.columns:
@@ -157,9 +159,7 @@ def fig_comparacao_metricas():
         ax.tick_params(axis="x", labelsize=8)
         ax.set_ylim(0, max(valores) * 1.18)
         for b, v in zip(barras, valores):
-            ax.text(
-                b.get_x() + b.get_width() / 2, v, f"{v:.1f}", ha="center", va="bottom", fontsize=9
-            )
+            ax.text(b.get_x() + b.get_width() / 2, v, f"{v:.1f}", ha="center", va="bottom", fontsize=9)
 
     fig.suptitle("Comparação de métricas de erro entre os modelos (menor = melhor)")
     fig.tight_layout()
@@ -167,14 +167,17 @@ def fig_comparacao_metricas():
 
 
 def fig_importancia_features():
-    imp = pd.read_csv(ARQ_IMPORTANCIAS, index_col=0)
-    coluna = imp.columns[0]
-    imp = imp.sort_values(coluna)
+    imp = pd.read_csv(ARQ_IMPORTANCIAS, index_col=0).sort_values("permutacao_media")
 
-    fig, ax = plt.subplots(figsize=(9, 5))
-    ax.barh(imp.index, imp[coluna], color=cor("gb"))
-    ax.set_title("Importância dos atributos — Gradient Boosting")
-    ax.set_xlabel("Importância relativa")
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.8), sharey=True)
+    axes[0].barh(imp.index, imp["importancia"], color=cor("gb"))
+    axes[0].set_title("Importância por impureza (treino)")
+    axes[0].set_xlabel("Importância relativa")
+    axes[1].barh(imp.index, imp["permutacao_media"], xerr=imp["permutacao_desvio"], color="#047857", alpha=0.85)
+    axes[1].axvline(0, color="black", linewidth=0.8)
+    axes[1].set_title("Importância por permutação (teste, 30 repetições)")
+    axes[1].set_xlabel("Aumento do MAE da variação diária ao embaralhar")
+    fig.suptitle("Gradient Boosting — quais atributos o modelo usa")
     fig.tight_layout()
     salvar(fig, "05_importancia_features.png")
 
@@ -208,6 +211,147 @@ def fig_residuos():
     salvar(fig, f"06_residuos_{chave}.png")
 
 
+def fig_consumo_eda():
+    """EDA: as séries de consumo de recursos que formam o custo."""
+    df = pd.read_csv(DATASET_PREPARADO, parse_dates=["data"])
+    paineis = [
+        ("requisicoes", "Requisições/dia", "#6366f1"),
+        ("instancias_ativas", "Instâncias ativas", "#0ea5e9"),
+        ("cpu_pct", "CPU média (%)", "#f97316"),
+        ("memoria_pct", "Memória média (%)", "#a855f7"),
+        ("armazenamento_gb", "Armazenamento (GB)", "#64748b"),
+        ("custo_usd", "Custo diário (USD)", COR_REAL),
+    ]
+    fig, axes = plt.subplots(3, 2, figsize=(12, 8.5), sharex=True)
+    for ax, (col, titulo, c) in zip(axes.ravel(), paineis):
+        ax.plot(df["data"], df[col], color=c, linewidth=0.7, alpha=0.6)
+        ax.plot(df["data"], df[col].rolling(28, center=True).mean(), color=c, linewidth=2)
+        ax.set_title(titulo, fontsize=11)
+    for ax in axes[-1]:
+        ax.tick_params(axis="x", rotation=25)
+    fig.suptitle("Consumo de recursos e custo — série diária (linha grossa = média móvel de 28 dias)")
+    fig.tight_layout()
+    salvar(fig, "07_eda_consumo.png")
+
+
+def fig_correlacao():
+    df = pd.read_csv(DATASET_PREPARADO, parse_dates=["data"])
+    cols = [
+        "requisicoes",
+        "instancias_ativas",
+        "cpu_pct",
+        "memoria_pct",
+        "armazenamento_gb",
+        "custo_usd",
+        "fim_de_semana",
+        "temporada_alta",
+        "custo_lag_1",
+        "custo_lag_7",
+    ]
+    corr = df[cols].corr()
+    fig, ax = plt.subplots(figsize=(8.6, 7.2))
+    im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
+    ax.set_xticks(range(len(cols)), cols, rotation=45, ha="right", fontsize=9)
+    ax.set_yticks(range(len(cols)), cols, fontsize=9)
+    for i in range(len(cols)):
+        for j in range(len(cols)):
+            v = corr.iloc[i, j]
+            ax.text(
+                j, i, f"{v:.2f}", ha="center", va="center", fontsize=7.5, color="white" if abs(v) > 0.6 else "black"
+            )
+    ax.grid(False)
+    fig.colorbar(im, ax=ax, shrink=0.8)
+    ax.set_title("Matriz de correlação (Pearson)")
+    fig.tight_layout()
+    salvar(fig, "08_correlacao.png")
+
+
+def fig_sazonalidade():
+    df = pd.read_csv(DATASET_PREPARADO, parse_dates=["data"])
+    nomes_dia = ["seg", "ter", "qua", "qui", "sex", "sáb", "dom"]
+    nomes_mes = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.3))
+    axes[0].boxplot([df.loc[df["dia_semana"] == d, "custo_usd"] for d in range(7)], tick_labels=nomes_dia)
+    axes[0].set_title("Custo por dia da semana")
+    axes[0].set_ylabel("Custo (USD)")
+    axes[1].boxplot([df.loc[df["mes"] == m, "custo_usd"] for m in range(1, 13)], tick_labels=nomes_mes)
+    axes[1].set_title("Custo por mês")
+    fig.tight_layout()
+    salvar(fig, "09_sazonalidade.png")
+
+
+def fig_validacao_cruzada():
+    if not ARQ_CV.exists():
+        return
+    cv = json.loads(ARQ_CV.read_text(encoding="utf-8"))
+    chaves = [c for c in MODELOS if c in cv]
+    fig, ax = plt.subplots(figsize=(10, 4.6))
+    for i, c in enumerate(chaves):
+        folds = [f["MAE"] for f in cv[c]["melhor"]["folds"]]
+        ax.scatter(np.full(len(folds), i) + np.linspace(-0.12, 0.12, len(folds)), folds, color=cor(c), alpha=0.7, s=28)
+        m, d = cv[c]["melhor"]["MAE_media"], cv[c]["melhor"]["MAE_desvio"]
+        ax.errorbar(i + 0.28, m, yerr=d, fmt="D", color=cor(c), capsize=6, markersize=7)
+        ax.text(i + 0.36, m, f"{m:.2f} ± {d:.2f}", va="center", fontsize=9)
+    ax.set_xticks(range(len(chaves)), [rotulo(c) for c in chaves], fontsize=9)
+    ax.set_xlim(-0.5, len(chaves) - 0.1)
+    ax.set_ylabel("MAE na dobra (USD)")
+    ax.set_title("Backtest temporal (5 dobras de 30 dias) — melhor configuração de cada modelo")
+    fig.tight_layout()
+    salvar(fig, "10_validacao_cruzada.png")
+
+
+def fig_horizonte():
+    if not ARQ_HORIZONTE.exists():
+        return
+    h = pd.read_csv(ARQ_HORIZONTE)
+    fig, ax = plt.subplots(figsize=(9, 4.3))
+    for c in MODELOS:
+        sub = h[h["modelo"] == rotulo(c)]
+        if sub.empty:
+            continue
+        ax.plot(
+            sub["horizonte"],
+            sub["MAPE_pct"],
+            marker="o",
+            color=cor(c),
+            label=rotulo(c),
+            linestyle=":" if c == "baseline" else "-",
+        )
+    ax.set_xlabel("Horizonte (dias à frente)")
+    ax.set_ylabel("MAPE (%)")
+    ax.set_title("Erro por horizonte de previsão — holdout Nov-Dez/2024")
+    ax.legend(fontsize=9)
+    fig.tight_layout()
+    salvar(fig, "11_erro_por_horizonte.png")
+
+
+def fig_componentes_prophet():
+    """Interpretação do modelo final: tendência + sazonalidades semanal e anual."""
+    try:
+        from src.registro import carregar_producao
+
+        modelos, meta = carregar_producao(PASTA_MODELOS)
+    except FileNotFoundError:
+        return
+    m = modelos["custo"]
+    futuro = m.make_future_dataframe(periods=0)
+    comp = m.predict(futuro)
+    fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
+    axes[0].plot(comp["ds"], comp["trend"], color=cor("prophet"))
+    axes[0].set_title("Tendência (USD/dia)")
+    axes[0].tick_params(axis="x", rotation=25)
+    semana = comp.assign(d=comp["ds"].dt.dayofweek).groupby("d")["weekly"].mean() * 100
+    axes[1].bar(["seg", "ter", "qua", "qui", "sex", "sáb", "dom"], semana, color=cor("prophet"))
+    axes[1].set_title("Efeito semanal (% sobre a tendência)")
+    ano = comp.assign(doy=comp["ds"].dt.dayofyear).groupby("doy")["yearly"].mean() * 100
+    axes[2].plot(ano.index, ano.values, color=cor("prophet"))
+    axes[2].set_title("Efeito anual (% sobre a tendência)")
+    axes[2].set_xlabel("Dia do ano")
+    fig.suptitle(f"Componentes do Prophet em produção (v{meta['versao']}, sazonalidade multiplicativa)")
+    fig.tight_layout()
+    salvar(fig, "12_componentes_prophet.png")
+
+
 def main():
     garantir_pastas()
     print("Gerando figuras...")
@@ -217,6 +361,12 @@ def main():
     fig_comparacao_metricas()
     fig_importancia_features()
     fig_residuos()
+    fig_consumo_eda()
+    fig_correlacao()
+    fig_sazonalidade()
+    fig_validacao_cruzada()
+    fig_horizonte()
+    fig_componentes_prophet()
     print(f"Figuras geradas em {PASTA_FIGURAS}")
 
 

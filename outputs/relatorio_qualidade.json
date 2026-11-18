@@ -1,0 +1,80 @@
+{
+  "aprovado": true,
+  "erros_criticos": [],
+  "linhas": 735,
+  "colunas": 7,
+  "periodo": [
+    "2023-01-01",
+    "2024-12-30"
+  ],
+  "valores_ausentes": {
+    "requisicoes": 14,
+    "instancias_ativas": 0,
+    "cpu_pct": 14,
+    "memoria_pct": 14,
+    "armazenamento_gb": 14,
+    "custo_usd": 0
+  },
+  "valores_ausentes_pct": {
+    "requisicoes": 1.9,
+    "instancias_ativas": 0.0,
+    "cpu_pct": 1.9,
+    "memoria_pct": 1.9,
+    "armazenamento_gb": 1.9,
+    "custo_usd": 0.0
+  },
+  "linhas_duplicadas": 5,
+  "datas_repetidas": 5,
+  "datas_faltantes_na_grade": 0,
+  "violacoes_de_faixa": {
+    "requisicoes": 0,
+    "instancias_ativas": 0,
+    "cpu_pct": 0,
+    "memoria_pct": 0,
+    "armazenamento_gb": 0,
+    "custo_usd": 0
+  },
+  "picos_suspeitos": {
+    "requisicoes": 26,
+    "cpu_pct": 16,
+    "custo_usd": 11
+  },
+  "estatisticas": {
+    "requisicoes": {
+      "media": 164269.38,
+      "desvio": 63787.51,
+      "min": 71016.67,
+      "max": 702158.21
+    },
+    "instancias_ativas": {
+      "media": 18.04,
+      "desvio": 5.42,
+      "min": 9.0,
+      "max": 35.0
+    },
+    "cpu_pct": {
+      "media": 65.53,
+      "desvio": 6.55,
+      "min": 50.31,
+      "max": 100.0
+    },
+    "memoria_pct": {
+      "media": 67.2,
+      "desvio": 6.8,
+      "min": 46.36,
+      "max": 86.39
+    },
+    "armazenamento_gb": {
+      "media": 1256.95,
+      "desvio": 443.29,
+      "min": 500.0,
+      "max": 2029.62
+    },
+    "custo_usd": {
+      "media": 65.95,
+      "desvio": 18.48,
+      "min": 24.7,
+      "max": 131.84
+    }
+  }
+}

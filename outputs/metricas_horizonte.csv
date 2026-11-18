@@ -1,0 +1,29 @@
+modelo,horizonte,MAE,MAPE_pct,erro_total_semana_pct
+Baseline sazonal (7 dias),1,10.661,9.451,8.25
+Baseline sazonal (7 dias),2,17.25,17.491,8.25
+Baseline sazonal (7 dias),3,15.733,17.287,8.25
+Baseline sazonal (7 dias),4,14.527,15.024,8.25
+Baseline sazonal (7 dias),5,8.673,8.356,8.25
+Baseline sazonal (7 dias),6,12.242,10.649,8.25
+Baseline sazonal (7 dias),7,12.568,11.668,8.25
+Gradient Boosting,1,8.481,7.616,8.54
+Gradient Boosting,2,12.267,12.498,8.54
+Gradient Boosting,3,11.846,13.212,8.54
+Gradient Boosting,4,11.761,11.952,8.54
+Gradient Boosting,5,9.28,9.175,8.54
+Gradient Boosting,6,12.908,11.136,8.54
+Gradient Boosting,7,8.811,8.342,8.54
+Prophet,1,6.674,5.727,4.64
+Prophet,2,9.187,9.223,4.64
+Prophet,3,11.694,13.642,4.64
+Prophet,4,7.016,6.834,4.64
+Prophet,5,9.182,9.082,4.64
+Prophet,6,8.965,7.709,4.64
+Prophet,7,5.288,4.758,4.64
+SARIMAX (ARIMA sazonal),1,8.437,7.556,7.79
+SARIMAX (ARIMA sazonal),2,12.155,12.28,7.79
+SARIMAX (ARIMA sazonal),3,13.75,15.547,7.79
+SARIMAX (ARIMA sazonal),4,10.856,11.007,7.79
+SARIMAX (ARIMA sazonal),5,8.17,8.086,7.79
+SARIMAX (ARIMA sazonal),6,12.154,10.446,7.79
+SARIMAX (ARIMA sazonal),7,10.702,9.756,7.79

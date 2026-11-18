@@ -12,10 +12,12 @@ Trata os problemas de qualidade injetados propositalmente no dataset bruto:
      modelos de mineração.
 """
 
+import json
+
 import numpy as np
 import pandas as pd
 
-from config import DATASET_BRUTO, DATASET_PREPARADO, garantir_pastas
+from src.config import ARQ_PREPARACAO, DATASET_BRUTO, DATASET_PREPARADO, GABARITO_INCIDENTES, PARAMS, garantir_pastas
 
 # Colunas de métricas sujeitas a falha de coleta (valores ausentes).
 COLUNAS_METRICAS = ["requisicoes", "cpu_pct", "memoria_pct", "armazenamento_gb", "custo_usd"]
@@ -23,9 +25,10 @@ COLUNAS_METRICAS = ["requisicoes", "cpu_pct", "memoria_pct", "armazenamento_gb",
 # Colunas em que faz sentido procurar incidentes (picos anômalos).
 COLUNAS_OUTLIERS = ["requisicoes", "cpu_pct", "custo_usd"]
 
-JANELA_MEDIANA = 15  # dias da mediana móvel usada como referência do "nível normal"
-FATOR_IQR = 2.5  # quanto mais alto, mais conservador na marcação de outliers
-LAGS = [1, 2, 7, 14]
+_P = PARAMS["preparacao"]
+JANELA_MEDIANA = _P["janela_mediana"]  # dias da mediana móvel usada como referência do "nível normal"
+FATOR_IQR = _P["fator_iqr"]  # quanto mais alto, mais conservador na marcação de outliers
+LAGS = _P["lags"]
 
 
 def carregar(caminho) -> pd.DataFrame:
@@ -87,6 +90,15 @@ def tratar_outliers(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     df["houve_incidente"] = 0
 
     for col in COLUNAS_OUTLIERS:
+        # Janela CENTRADA (olha 7 dias para trás e 7 para frente). Testamos uma
+        # janela só com o passado: ela acertou os mesmos 10 incidentes, mas
+        # gerou 7 falsos positivos -- 6 deles nos primeiros dias de novembro,
+        # porque um degrau sazonal legítimo (Black Friday) parece "pico" para
+        # quem só olha o passado, e a winsorização teria apagado o início da
+        # alta temporada. A limpeza do HISTÓRICO é retrospectiva, então usar
+        # vizinhos dos dois lados é legítimo aqui; os atributos de previsão
+        # continuam usando apenas D-1. Em produção, a detecção de anomalias
+        # de um dia novo é feita pela API, com o intervalo de previsão.
         mediana_movel = df[col].rolling(window=JANELA_MEDIANA, center=True, min_periods=5).median()
         residuo = df[col] - mediana_movel
 
@@ -157,30 +169,60 @@ def engenharia_atributos(df: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     return df, n_antes - len(df)
 
 
-def main():
-    garantir_pastas()
-
-    df = carregar(DATASET_BRUTO)
+def preparar(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    """Executa toda a preparação, na ordem, e devolve o dataset final + estatísticas."""
     linhas_brutas = len(df)
-
     df, duplicatas = remover_duplicatas(df)
     df, n_datas_faltantes = validar_continuidade(df)
     df, ausentes_por_coluna = imputar_ausentes(df)
     df, n_incidentes = tratar_outliers(df)
     df_final, n_descartadas = engenharia_atributos(df)
+    estatisticas = {
+        "linhas_brutas": linhas_brutas,
+        "linhas_identicas": duplicatas["linhas_identicas"],
+        "datas_repetidas_removidas": duplicatas["datas_repetidas_removidas"],
+        "datas_faltantes_reinseridas": n_datas_faltantes,
+        "valores_ausentes_imputados": ausentes_por_coluna,
+        "dias_com_incidente": n_incidentes,
+        "linhas_descartadas_por_lag": n_descartadas,
+        "linhas_finais": len(df_final),
+        "colunas_finais": len(df_final.columns),
+        "periodo_final": [f"{df_final['data'].min():%Y-%m-%d}", f"{df_final['data'].max():%Y-%m-%d}"],
+    }
+    return df_final, estatisticas
 
-    df_final.to_csv(DATASET_PREPARADO, index=False)
+
+def avaliar_deteccao(df_final: pd.DataFrame) -> dict:
+    """Compara os dias marcados como incidente com o gabarito da simulação."""
+    verdade = set(pd.read_csv(GABARITO_INCIDENTES)["data"])
+    inicio = f"{df_final['data'].min():%Y-%m-%d}"
+    verdade = {d for d in verdade if d >= inicio}
+    marcados = set(df_final.loc[df_final["houve_incidente"] == 1, "data"].dt.strftime("%Y-%m-%d"))
+    vp = len(verdade & marcados)
+    return {
+        "verdadeiros_positivos": vp,
+        "falsos_positivos": len(marcados - verdade),
+        "falsos_negativos": len(verdade - marcados),
+        "precisao": round(vp / len(marcados), 3) if marcados else None,
+        "recall": round(vp / len(verdade), 3) if verdade else None,
+    }
+
+
+def main():
+    garantir_pastas()
+
+    df_final, est = preparar(carregar(DATASET_BRUTO))
+    df_final.to_csv(DATASET_PREPARADO, index=False, float_format="%.6f", lineterminator="\n")
+
+    relatorio = {"preparacao": est}
+    if GABARITO_INCIDENTES.exists():
+        relatorio["deteccao_incidentes"] = avaliar_deteccao(df_final)
+        print(f"Detecção de incidentes vs. gabarito: {relatorio['deteccao_incidentes']}")
+    ARQ_PREPARACAO.write_text(json.dumps(relatorio, indent=2, ensure_ascii=False), encoding="utf-8", newline="\n")
 
     print("=== Relatório de qualidade e preparação de dados ===")
-    print(f"Linhas no dataset bruto:               {linhas_brutas}")
-    print(f"Linhas totalmente idênticas:           {duplicatas['linhas_identicas']}")
-    print(f"Datas repetidas removidas:             {duplicatas['datas_repetidas_removidas']}")
-    print(f"Datas faltantes reinseridas na grade:  {n_datas_faltantes}")
-    print(f"Valores ausentes por coluna (antes):   {ausentes_por_coluna}")
-    print(f"Dias marcados como incidente/outlier:  {n_incidentes}")
-    print(f"Linhas descartadas por lag/janela:     {n_descartadas}")
-    print(f"Linhas no dataset final preparado:     {len(df_final)}")
-    print(f"Período coberto: {df_final['data'].min():%Y-%m-%d} a {df_final['data'].max():%Y-%m-%d}")
+    for chave, valor in est.items():
+        print(f"{chave:32s} {valor}")
     print(f"Colunas finais: {list(df_final.columns)}")
     print(f"\nSalvo em: {DATASET_PREPARADO}")
 

@@ -1,0 +1,16 @@
+{
+  "producao": 1,
+  "versoes": [
+    {
+      "versao": 1,
+      "criado_em": "2026-11-18T18:51:32+00:00",
+      "promovido": true,
+      "metricas_teste": {
+        "MAE": 8.665,
+        "RMSE": 11.0,
+        "R2": 0.1022,
+        "MAPE_%": 8.46
+      }
+    }
+  ]
+}

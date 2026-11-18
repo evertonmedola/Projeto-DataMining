@@ -6,21 +6,22 @@
     "MAPE_%": 12.93
   },
   "SARIMAX (ARIMA sazonal)": {
-    "MAE": 9.753,
-    "RMSE": 12.009,
-    "R2": -0.0701,
-    "MAPE_%": 9.57
+    "MAE": 9.744,
+    "RMSE": 11.92,
+    "R2": -0.0543,
+    "MAPE_%": 9.53
   },
   "Prophet": {
-    "MAE": 8.645,
-    "RMSE": 10.985,
-    "R2": 0.1046,
-    "MAPE_%": 8.44
+    "MAE": 8.665,
+    "RMSE": 11.0,
+    "R2": 0.1022,
+    "MAPE_%": 8.46
   },
   "Gradient Boosting": {
-    "MAE": 9.995,
-    "RMSE": 12.193,
-    "R2": -0.1032,
-    "MAPE_%": 9.84
-  }
+    "MAE": 9.917,
+    "RMSE": 12.145,
+    "R2": -0.0945,
+    "MAPE_%": 9.76
+  },
+  "melhor_modelo": "Prophet"
 }

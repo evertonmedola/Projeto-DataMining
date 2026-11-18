@@ -18,15 +18,15 @@ Também são injetados propositalmente problemas de qualidade de dados
 de Preparação de Dados do CRISP-DM tenha problemas reais para tratar.
 """
 
+import hashlib
+
 import numpy as np
 import pandas as pd
 
-from config import DATASET_BRUTO, RANDOM_SEED, garantir_pastas
+from src.config import DATASET_BRUTO, GABARITO_INCIDENTES, PARAMS, RANDOM_SEED, garantir_pastas
 
-np.random.seed(RANDOM_SEED)
-
-N_DIAS = 730  # 2 anos de histórico diário
-DATA_INICIAL = "2023-01-01"
+N_DIAS = PARAMS["dados"]["n_dias"]  # 2 anos de histórico diário
+DATA_INICIAL = PARAMS["dados"]["data_inicial"]
 
 
 def gerar_serie_base(n_dias: int) -> pd.DataFrame:
@@ -44,13 +44,7 @@ def gerar_serie_base(n_dias: int) -> pd.DataFrame:
 
     base_requisicoes = 120_000
     ruido_requisicoes = np.random.normal(0, 4_000, n_dias)
-    requisicoes = (
-        base_requisicoes
-        * tendencia_crescimento
-        * fator_semanal
-        * fator_sazonal_anual
-        + ruido_requisicoes
-    )
+    requisicoes = base_requisicoes * tendencia_crescimento * fator_semanal * fator_sazonal_anual + ruido_requisicoes
     requisicoes = np.clip(requisicoes, 20_000, None)
 
     # --- Instâncias ativas (autoscaling reage à demanda, com suavização) ---
@@ -104,14 +98,10 @@ def calcular_custo(df: pd.DataFrame) -> pd.DataFrame:
 
     custo_computacao = df["instancias_ativas"] * 24 * preco_instancia_hora
     custo_storage = df["armazenamento_gb"] * (preco_storage_gb_mes / 30)
-    custo_transferencia = (
-        (df["requisicoes"] / 1_000_000) * preco_por_milhao_requisicoes * fator_volume_transferencia
-    )
+    custo_transferencia = (df["requisicoes"] / 1_000_000) * preco_por_milhao_requisicoes * fator_volume_transferencia
 
     ruido_custo = np.random.normal(0, 8, len(df))
-    df["custo_usd"] = (
-        custo_fixo_diario + custo_computacao + custo_storage + custo_transferencia + ruido_custo
-    )
+    df["custo_usd"] = custo_fixo_diario + custo_computacao + custo_storage + custo_transferencia + ruido_custo
     df["custo_usd"] = df["custo_usd"].clip(lower=10)
     return df
 
@@ -133,6 +123,9 @@ def injetar_problemas_qualidade(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[idx_incidentes, "cpu_pct"] * rng.uniform(1.4, 1.8, size=10), 0, 100
     )
     df.loc[idx_incidentes, "custo_usd"] *= rng.uniform(1.3, 1.9, size=10)
+    # Gabarito dos incidentes injetados: como o dado é simulado, sabemos a
+    # verdade e podemos medir a precisão/recall da detecção de outliers.
+    df.attrs["datas_incidentes"] = sorted(df.loc[idx_incidentes, "data"].dt.strftime("%Y-%m-%d"))
 
     # 3) Linhas duplicadas (erro comum de ETL / reprocessamento)
     linhas_duplicadas = df.sample(n=5, random_state=RANDOM_SEED)
@@ -141,17 +134,35 @@ def injetar_problemas_qualidade(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def main():
-    garantir_pastas()
+def sha256_arquivo(caminho) -> str:
+    """Hash do arquivo gerado: permite conferir que a mesma semente gera o mesmo dado."""
+    h = hashlib.sha256()
+    with open(caminho, "rb") as f:
+        for bloco in iter(lambda: f.read(1 << 16), b""):
+            h.update(bloco)
+    return h.hexdigest()
 
+
+def gerar() -> pd.DataFrame:
+    # A semente é aplicada aqui (e não na importação do módulo) para que cada
+    # chamada produza exatamente o mesmo dataset, inclusive dentro dos testes.
+    np.random.seed(RANDOM_SEED)
     df = gerar_serie_base(N_DIAS)
     df = calcular_custo(df)
     df = injetar_problemas_qualidade(df)
-    df = df.sort_values("data").reset_index(drop=True)
+    gabarito = df.attrs.get("datas_incidentes", [])
+    df = df.sort_values("data", kind="stable").reset_index(drop=True)
+    df.attrs["datas_incidentes"] = gabarito
+    return df
 
-    df.to_csv(DATASET_BRUTO, index=False)
+
+def main():
+    garantir_pastas()
+    df = gerar()
+    df.to_csv(DATASET_BRUTO, index=False, float_format="%.6f", lineterminator="\n")
+    pd.DataFrame({"data": df.attrs["datas_incidentes"]}).to_csv(GABARITO_INCIDENTES, index=False, lineterminator="\n")
     print(f"Dataset bruto gerado com {len(df)} linhas -> {DATASET_BRUTO}")
-    print(df.describe(include="all").T[["count", "mean", "std", "min", "max"]])
+    print(f"SHA-256: {sha256_arquivo(DATASET_BRUTO)}")
 
 
 if __name__ == "__main__":

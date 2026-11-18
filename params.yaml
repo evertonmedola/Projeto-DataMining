@@ -1,0 +1,42 @@
+# Parâmetros centrais do CloudCast. Todo o código lê daqui (src/config.py),
+# então mudar um valor aqui e rodar `python -m src.pipeline` (ou `dvc repro`)
+# refaz apenas o necessário.
+
+seed: 42
+
+dados:
+  n_dias: 730              # 2 anos de histórico diário
+  data_inicial: "2023-01-01"
+
+preparacao:
+  janela_mediana: 15       # dias da mediana móvel (somente passado) usada como "nível normal"
+  fator_iqr: 2.5           # limiar de outlier no resíduo (quanto maior, mais conservador)
+  lags: [1, 2, 7, 14]
+
+avaliacao:
+  dias_teste: 60           # holdout final (Nov-Dez/2024), usado uma única vez
+  n_folds: 5               # dobras do backtest (validação cruzada temporal)
+  dias_por_fold: 30        # tamanho de cada janela de validação
+  horizonte_max: 7         # avaliação multi-horizonte (1 a 7 dias à frente)
+  passo_reajuste_prophet: 7
+
+# Grades de hiperparâmetros (busca exaustiva com backtest temporal)
+busca:
+  sarimax:
+    order: [[1, 1, 1], [2, 1, 2]]
+    seasonal_order: [[1, 0, 1, 7], [0, 1, 1, 7]]
+  prophet:
+    changepoint_prior_scale: [0.01, 0.05, 0.2]
+    seasonality_mode: ["additive", "multiplicative"]
+  gb:
+    n_estimators: [150, 300]
+    learning_rate: [0.03, 0.08]
+    max_depth: [2, 3]
+
+produto:
+  modelo_nome: "cloudcast-custo"
+  horizonte_padrao: 7
+  horizonte_maximo: 90
+  orcamento_mensal_usd: 3000
+  limite_alerta_crescimento: 0.15   # +15% na média prevista vs média recente
+  limite_mape_monitoramento: 15.0   # % de erro recente que dispara recomendação de retreino

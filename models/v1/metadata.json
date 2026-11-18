@@ -1,0 +1,41 @@
+{
+  "modelo": "cloudcast-custo",
+  "algoritmo": "Prophet",
+  "hiperparametros": {
+    "changepoint_prior_scale": 0.05,
+    "seasonality_mode": "multiplicative"
+  },
+  "treinado_ate": "2024-12-30",
+  "n_observacoes": 716,
+  "dados_sha256": "c1e71dd31669a218",
+  "git_commit": "223df55",
+  "metricas_teste": {
+    "MAE": 8.665,
+    "RMSE": 11.0,
+    "R2": 0.1022,
+    "MAPE_%": 8.46
+  },
+  "metricas_teste_consumo": {
+    "requisicoes": {
+      "MAE": 16874.179,
+      "RMSE": 21953.222,
+      "R2": 0.6849,
+      "MAPE_%": 6.48
+    },
+    "instancias": {
+      "MAE": 1.573,
+      "RMSE": 2.005,
+      "R2": 0.5016,
+      "MAPE_%": 5.12
+    }
+  },
+  "meta_mape": 10.0,
+  "custo_medio_ultimos_30d": 105.63,
+  "versao": 1,
+  "criado_em": "2026-11-18T18:51:32+00:00",
+  "series": [
+    "custo",
+    "instancias",
+    "requisicoes"
+  ]
+}
