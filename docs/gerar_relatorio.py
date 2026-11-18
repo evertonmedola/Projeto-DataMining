@@ -256,7 +256,7 @@ tabela(
             "`src/gerar_dados.py` (seed = 42; SHA-256 registrado). Dados sintéticos, uso acadêmico.",
         ],
         ["Demonstração", "Ao vivo, durante a apresentação, com o sistema rodando via docker compose (roteiro na seção 9.2)"],
-        ["Data de entrega", "[PREENCHER: dd/mm/2026]"],
+        ["Data de entrega", "18/11/2026"],
     ],
     [1.6, 4.9],
 )
@@ -1057,7 +1057,7 @@ tabela(
     tamanho=9,
 )
 p(
-    "Cobertura: **73%** do pacote `src` (`pytest --cov=src`); a CI falha abaixo de 70%. Os testes usam pasta de "
+    "Cobertura: **72%** do pacote `src` (`pytest --cov=src`); a CI falha abaixo de 70%. Os testes usam pasta de "
     "modelos e banco temporários, sem tocar nos artefatos reais. Lint com Ruff sem nenhum aviso."
 )
 
